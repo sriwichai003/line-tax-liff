@@ -70,6 +70,10 @@ async function init() {
     return;
   }
 
+  bindNav();
+  bindLinkForm();
+  bindRequestForm();
+
   if (!sessionToken) {
     const idToken = liff.getIDToken();
     const data = await api('login', { idToken: idToken });
@@ -87,6 +91,7 @@ async function init() {
   try {
     const dash = await api('getDashboard', {});
     if (!dash.linked) { showScreen('link'); return; }
+    document.getElementById('bottom-nav').classList.remove('hidden');
     renderHome(dash);
   } catch (err) {
     // session หมดอายุ/ไม่ถูกต้อง -> login ใหม่
@@ -95,11 +100,6 @@ async function init() {
     location.reload();
     return;
   }
-
-  document.getElementById('bottom-nav').classList.remove('hidden');
-  bindNav();
-  bindLinkForm();
-  bindRequestForm();
 }
 
 function showScreen(name) {
@@ -118,11 +118,15 @@ function bindLinkForm() {
     const citizenId = document.getElementById('input-citizen-id').value.trim();
     const phone = document.getElementById('input-phone').value.trim();
     if (citizenId.length !== 13) { showToast('กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก'); return; }
-    await api('linkAccount', { citizenId: citizenId, phone: phone });
-    showToast('ผูกบัญชีสำเร็จ');
-    const dash = await api('getDashboard', {});
-    document.getElementById('bottom-nav').classList.remove('hidden');
-    renderHome(dash);
+    try {
+      await api('linkAccount', { citizenId: citizenId, phone: phone });
+      showToast('ผูกบัญชีสำเร็จ');
+      const dash = await api('getDashboard', {});
+      document.getElementById('bottom-nav').classList.remove('hidden');
+      renderHome(dash);
+    } catch (err) {
+      showToast('เกิดข้อผิดพลาด: ' + err.message);
+    }
   });
 }
 
@@ -173,13 +177,18 @@ function renderInvoiceCard(inv) {
 async function loadInvoices(taxType) {
   const list = document.getElementById('invoice-list');
   list.innerHTML = '<div class="loading">กำลังโหลด...</div>';
-  const data = await api('getInvoices', { taxType: taxType || '' });
-  invoicesCache = data;
-  if (data.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">🧾</div>ไม่พบรายการ</div>';
-    return;
+  try {
+    const data = await api('getInvoices', { taxType: taxType || '' });
+    invoicesCache = data;
+    if (data.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="emoji">🧾</div>ไม่พบรายการ</div>';
+      return;
+    }
+    list.innerHTML = data.map(renderInvoiceCard).join('');
+  } catch (err) {
+    list.innerHTML = '<div class="empty-state"><div class="emoji">❌</div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
-  list.innerHTML = data.map(renderInvoiceCard).join('');
 }
 
 function bindInvoiceFilters() {
@@ -208,13 +217,18 @@ function renderPayInfo() {
 async function loadPayInvoices() {
   const list = document.getElementById('pay-invoice-list');
   list.innerHTML = '<div class="loading">กำลังโหลด...</div>';
-  const data = await api('getInvoices', {});
-  const unpaid = data.filter(function (inv) { return inv.Status !== 'Paid'; });
-  if (unpaid.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">✅</div>ไม่มีรายการค้างชำระ</div>';
-    return;
+  try {
+    const data = await api('getInvoices', {});
+    const unpaid = data.filter(function (inv) { return inv.Status !== 'Paid'; });
+    if (unpaid.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="emoji">✅</div>ไม่มีรายการค้างชำระ</div>';
+      return;
+    }
+    list.innerHTML = unpaid.map(renderInvoiceCard).join('');
+  } catch (err) {
+    list.innerHTML = '<div class="empty-state"><div class="emoji">❌</div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
-  list.innerHTML = unpaid.map(renderInvoiceCard).join('');
 }
 
 // ============ แจ้ง/ยื่นเรื่อง ============
@@ -223,38 +237,51 @@ function bindRequestForm() {
     const type = document.getElementById('req-type').value;
     const detail = document.getElementById('req-detail').value.trim();
     if (!detail) { showToast('กรุณากรอกรายละเอียด'); return; }
-    await api('createRequest', { type: type, detail: detail });
-    document.getElementById('req-detail').value = '';
-    showToast('ส่งเรื่องเรียบร้อย');
-    loadRequests();
+    try {
+      await api('createRequest', { type: type, detail: detail });
+      document.getElementById('req-detail').value = '';
+      showToast('ส่งเรื่องเรียบร้อย');
+      loadRequests();
+    } catch (err) {
+      showToast('เกิดข้อผิดพลาด: ' + err.message);
+    }
   });
 }
 
 async function loadRequests() {
   const list = document.getElementById('request-list');
   list.innerHTML = '<div class="loading">กำลังโหลด...</div>';
-  const data = await api('getRequests', {});
-  if (data.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">📭</div>ยังไม่มีเรื่องที่แจ้ง</div>';
-    return;
+  try {
+    const data = await api('getRequests', {});
+    if (data.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="emoji">📭</div>ยังไม่มีเรื่องที่แจ้ง</div>';
+      return;
+    }
+    const typeLabel = { sign_tax_filing: 'ยื่นแบบภาษีป้าย', property_change: 'แจ้งเปลี่ยนแปลงข้อมูล', garbage_issue: 'ปัญหาขยะ', other: 'อื่นๆ' };
+    const statusLabel = { Pending: 'รอดำเนินการ', InProgress: 'กำลังดำเนินการ', Done: 'เสร็จสิ้น', Rejected: 'ปฏิเสธ' };
+    list.innerHTML = '<div class="card status-list">' + data.map(function (r) {
+      return '<div class="status-row"><span>' + (typeLabel[r.Type] || r.Type) + '<br><span class="muted">' + formatDate(r.CreatedAt) + '</span></span>' +
+        '<span class="badge ' + (r.Status === 'Done' ? 'paid' : r.Status === 'Rejected' ? 'overdue' : 'unpaid') + '">' + (statusLabel[r.Status] || r.Status) + '</span></div>';
+    }).join('') + '</div>';
+  } catch (err) {
+    list.innerHTML = '<div class="empty-state"><div class="emoji">❌</div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
-  const typeLabel = { sign_tax_filing: 'ยื่นแบบภาษีป้าย', property_change: 'แจ้งเปลี่ยนแปลงข้อมูล', garbage_issue: 'ปัญหาขยะ', other: 'อื่นๆ' };
-  const statusLabel = { Pending: 'รอดำเนินการ', InProgress: 'กำลังดำเนินการ', Done: 'เสร็จสิ้น', Rejected: 'ปฏิเสธ' };
-  list.innerHTML = '<div class="card status-list">' + data.map(function (r) {
-    return '<div class="status-row"><span>' + (typeLabel[r.Type] || r.Type) + '<br><span class="muted">' + formatDate(r.CreatedAt) + '</span></span>' +
-      '<span class="badge ' + (r.Status === 'Done' ? 'paid' : r.Status === 'Rejected' ? 'overdue' : 'unpaid') + '">' + (statusLabel[r.Status] || r.Status) + '</span></div>';
-  }).join('') + '</div>';
 }
 
 // ============ โปรไฟล์ ============
 async function loadProfile() {
-  const data = await api('getProfile', {});
-  document.getElementById('profile-pic').src = data.PictureUrl || '';
-  document.getElementById('profile-name').textContent = data.DisplayName || '';
-  document.getElementById('profile-citizen-id').textContent = 'เลขบัตรประชาชน: ' + (data.CitizenId || '-');
-  document.getElementById('contact-box').innerHTML =
-    '☎️ โทร: ' + (publicConfig.ContactPhone || '-') + '<br>' +
-    '🕒 เวลาทำการ: ' + (publicConfig.OfficeHours || '-');
+  try {
+    const data = await api('getProfile', {});
+    document.getElementById('profile-pic').src = data.PictureUrl || '';
+    document.getElementById('profile-name').textContent = data.DisplayName || '';
+    document.getElementById('profile-citizen-id').textContent = 'เลขบัตรประชาชน: ' + (data.CitizenId || '-');
+    document.getElementById('contact-box').innerHTML =
+      '☎️ โทร: ' + (publicConfig.ContactPhone || '-') + '<br>' +
+      '🕒 เวลาทำการ: ' + (publicConfig.OfficeHours || '-');
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาด: ' + err.message);
+  }
 }
 
 // ============ nav ============
