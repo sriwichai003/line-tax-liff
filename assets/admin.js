@@ -23,7 +23,10 @@ async function api(action, payload) {
   } catch (parseErr) {
     throw new Error('เซิร์ฟเวอร์ตอบกลับข้อมูลผิดรูปแบบ (status=' + resp.status + ')');
   }
-  if (!data.ok) throw new Error(data.error || 'api_error');
+  if (!data.ok) {
+    console.error('Server error detail:', data.detail);
+    throw new Error(data.error + (data.detail ? ' (' + data.detail + ')' : ''));
+  }
   return data.data;
 }
 
