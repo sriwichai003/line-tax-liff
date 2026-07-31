@@ -13,12 +13,23 @@ const TAX_TYPE_ICON = { SignTax: '🪧', LandTax: '🏡', Garbage: '🗑️' };
 // ============ helper: เรียก API ============
 async function api(action, payload) {
   const body = Object.assign({ action, sessionToken }, payload || {});
-  const resp = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // เลี่ยง CORS preflight
-    body: JSON.stringify(body)
-  });
-  const data = await resp.json();
+  let resp;
+  try {
+    resp = await fetch(API_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+  } catch (networkErr) {
+    throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (' + networkErr.message + ')');
+  }
+  let data;
+  try {
+    data = await resp.json();
+  } catch (parseErr) {
+    throw new Error('เซิร์ฟเวอร์ตอบกลับข้อมูลผิดรูปแบบ (status=' + resp.status + ')');
+  }
   if (!data.ok) throw new Error(data.error || 'api_error');
   return data.data;
 }

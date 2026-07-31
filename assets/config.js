@@ -10,5 +10,5 @@ window.APP_CONFIG = {
 
   // URL ของ Google Apps Script Web App หลัง Deploy
   // รูปแบบ: https://script.google.com/macros/s/XXXXXXXX/exec
-  GAS_API_URL: 'https://script.google.com/macros/s/AKfycbzIaWbOHn9dq-eTynsJHMQxCC5u63RtnJ5l13CUB1OpTAfX-670eNBSbw4n6sq7O3Z2/exec'
+  GAS_API_URL: 'https://script.google.com/macros/s/AKfycbzvyiJctTME2VqfSaue_4LLm2MPo_77Dz6xyfeGheklika0uFNxAsQvmd_VP0eK_Cxg/exec'
 };
