@@ -8,7 +8,7 @@ let publicConfig = {};
 let invoicesCache = [];
 
 const TAX_TYPE_LABEL = { SignTax: 'ภาษีป้าย', LandTax: 'ภาษีที่ดินและสิ่งปลูกสร้าง', Garbage: 'ค่าธรรมเนียมขยะ' };
-const TAX_TYPE_ICON = { SignTax: '🪧', LandTax: '🏡', Garbage: '🗑️' };
+const TAX_TYPE_ICON = { SignTax: '<i class="fas fa-sign"></i>', LandTax: '<i class="fas fa-home"></i>', Garbage: '<i class="fas fa-trash-alt"></i>' };
 
 // ============ helper: เรียก API ============
 async function api(action, payload) {
@@ -145,7 +145,7 @@ function renderHome(dash) {
 
   const nearDue = document.getElementById('near-due-list');
   if (!dash.nearDue || dash.nearDue.length === 0) {
-    nearDue.innerHTML = '<div class="empty-state"><div class="emoji">✅</div>ไม่มีรายการค้างชำระ</div>';
+    nearDue.innerHTML = '<div class="empty-state"><div class="emoji" style="color:var(--success)"><i class="fas fa-check-circle"></i></div>ไม่มีรายการค้างชำระ</div>';
   } else {
     nearDue.innerHTML = dash.nearDue.map(renderInvoiceCard).join('');
   }
@@ -153,7 +153,7 @@ function renderHome(dash) {
   if (publicConfig.AnnounceText) {
     const box = document.getElementById('announce-box');
     box.classList.remove('hidden');
-    box.textContent = '📢 ' + publicConfig.AnnounceText;
+    box.innerHTML = '<i class="fas fa-bullhorn" style="margin-right:6px; color:var(--accent);"></i>' + publicConfig.AnnounceText;
   }
   showScreen('home');
 }
@@ -181,12 +181,12 @@ async function loadInvoices(taxType) {
     const data = await api('getInvoices', { taxType: taxType || '' });
     invoicesCache = data;
     if (data.length === 0) {
-      list.innerHTML = '<div class="empty-state"><div class="emoji">🧾</div>ไม่พบรายการ</div>';
+      list.innerHTML = '<div class="empty-state"><div class="emoji"><i class="fas fa-file-invoice"></i></div>ไม่พบรายการ</div>';
       return;
     }
     list.innerHTML = data.map(renderInvoiceCard).join('');
   } catch (err) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">❌</div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    list.innerHTML = '<div class="empty-state"><div class="emoji" style="color:var(--danger)"><i class="fas fa-times-circle"></i></div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
 }
@@ -221,12 +221,12 @@ async function loadPayInvoices() {
     const data = await api('getInvoices', {});
     const unpaid = data.filter(function (inv) { return inv.Status !== 'Paid'; });
     if (unpaid.length === 0) {
-      list.innerHTML = '<div class="empty-state"><div class="emoji">✅</div>ไม่มีรายการค้างชำระ</div>';
+      list.innerHTML = '<div class="empty-state"><div class="emoji" style="color:var(--success)"><i class="fas fa-check-circle"></i></div>ไม่มีรายการค้างชำระ</div>';
       return;
     }
     list.innerHTML = unpaid.map(renderInvoiceCard).join('');
   } catch (err) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">❌</div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    list.innerHTML = '<div class="empty-state"><div class="emoji" style="color:var(--danger)"><i class="fas fa-times-circle"></i></div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
 }
@@ -254,7 +254,7 @@ async function loadRequests() {
   try {
     const data = await api('getRequests', {});
     if (data.length === 0) {
-      list.innerHTML = '<div class="empty-state"><div class="emoji">📭</div>ยังไม่มีเรื่องที่แจ้ง</div>';
+      list.innerHTML = '<div class="empty-state"><div class="emoji"><i class="fas fa-inbox"></i></div>ยังไม่มีเรื่องที่แจ้ง</div>';
       return;
     }
     const typeLabel = { sign_tax_filing: 'ยื่นแบบภาษีป้าย', property_change: 'แจ้งเปลี่ยนแปลงข้อมูล', garbage_issue: 'ปัญหาขยะ', other: 'อื่นๆ' };
@@ -264,7 +264,7 @@ async function loadRequests() {
         '<span class="badge ' + (r.Status === 'Done' ? 'paid' : r.Status === 'Rejected' ? 'overdue' : 'unpaid') + '">' + (statusLabel[r.Status] || r.Status) + '</span></div>';
     }).join('') + '</div>';
   } catch (err) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">❌</div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    list.innerHTML = '<div class="empty-state"><div class="emoji" style="color:var(--danger)"><i class="fas fa-times-circle"></i></div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
 }
@@ -277,8 +277,8 @@ async function loadProfile() {
     document.getElementById('profile-name').textContent = data.DisplayName || '';
     document.getElementById('profile-citizen-id').textContent = 'เลขบัตรประชาชน: ' + (data.CitizenId || '-');
     document.getElementById('contact-box').innerHTML =
-      '☎️ โทร: ' + (publicConfig.ContactPhone || '-') + '<br>' +
-      '🕒 เวลาทำการ: ' + (publicConfig.OfficeHours || '-');
+      '<i class="fas fa-phone" style="width:16px;"></i> โทร: ' + (publicConfig.ContactPhone || '-') + '<br>' +
+      '<i class="far fa-clock" style="width:16px;"></i> เวลาทำการ: ' + (publicConfig.OfficeHours || '-');
   } catch (err) {
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }

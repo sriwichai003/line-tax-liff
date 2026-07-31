@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบหลังบ้าน - เจ้าหน้าที่</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/style.css">
 <style>
   .admin-tabs{ display:flex; gap:8px; overflow-x:auto; padding:12px 16px 0; }
@@ -19,7 +20,7 @@
   <div id="screen-loading" class="loading">กำลังตรวจสอบสิทธิ์เจ้าหน้าที่...</div>
 
   <div id="screen-denied" class="page hidden" style="text-align:center; padding-top:60px;">
-    <div style="font-size:40px;">🔒</div>
+    <div style="font-size:40px; color:var(--text-muted);"><i class="fas fa-lock"></i></div>
     <h3 style="margin-top:12px;">ไม่มีสิทธิ์เข้าถึง</h3>
     <p class="muted">บัญชี LINE นี้ยังไม่ได้ถูกเพิ่มเป็นเจ้าหน้าที่ กรุณาติดต่อผู้ดูแลระบบ (superadmin) เพื่อเพิ่มสิทธิ์</p>
   </div>
