@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบหลังบ้าน - เจ้าหน้าที่</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .admin-tabs{ display:flex; gap:8px; overflow-x:auto; padding:12px 16px 0; }
+  .admin-tabs button{ white-space:nowrap; }
+  table.simple{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.simple th, table.simple td{ text-align:left; padding:8px 6px; border-bottom:1px solid var(--border); }
+  table.simple th{ color:var(--text-muted); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="app" id="app" style="max-width:640px;">
+
+  <div id="screen-loading" class="loading">กำลังตรวจสอบสิทธิ์เจ้าหน้าที่...</div>
+
+  <div id="screen-denied" class="page hidden" style="text-align:center; padding-top:60px;">
+    <div style="font-size:40px;">🔒</div>
+    <h3 style="margin-top:12px;">ไม่มีสิทธิ์เข้าถึง</h3>
+    <p class="muted">บัญชี LINE นี้ยังไม่ได้ถูกเพิ่มเป็นเจ้าหน้าที่ กรุณาติดต่อผู้ดูแลระบบ (superadmin) เพื่อเพิ่มสิทธิ์</p>
+  </div>
+
+  <div id="screen-admin" class="hidden">
+    <div class="topbar">
+      <div class="org-name">ระบบหลังบ้าน</div>
+      <div class="greeting" id="admin-name">เจ้าหน้าที่</div>
+      <div class="sub" id="admin-role"></div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="btn btn-sm btn-primary" data-tab="settings">ตั้งค่าหน่วยงาน</button>
+      <button class="btn btn-sm btn-outline" data-tab="invoices">ใบแจ้งหนี้</button>
+      <button class="btn btn-sm btn-outline" data-tab="properties">ทรัพย์สิน</button>
+      <button class="btn btn-sm btn-outline" data-tab="requests">เรื่องแจ้ง</button>
+      <button class="btn btn-sm btn-outline" data-tab="admins">ผู้ดูแลระบบ</button>
+    </div>
+
+    <div class="page">
+
+      <!-- ตั้งค่าหน่วยงาน -->
+      <div id="tab-settings" class="tab-panel">
+        <div class="card">
+          <h3 style="margin-bottom:12px;">ข้อมูลหน่วยงาน</h3>
+          <div class="field"><label>ชื่อหน่วยงาน</label><input id="cfg-OrgName"></div>
+          <div class="field"><label>ธนาคาร</label><input id="cfg-BankName"></div>
+          <div class="field"><label>เลขบัญชี</label><input id="cfg-BankAccountNo"></div>
+          <div class="field"><label>ชื่อบัญชี</label><input id="cfg-BankAccountName"></div>
+          <div class="field"><label>พร้อมเพย์ (ถ้ามี)</label><input id="cfg-PromptPay"></div>
+          <div class="field"><label>เบอร์โทรติดต่อ</label><input id="cfg-ContactPhone"></div>
+          <div class="field"><label>เวลาทำการ</label><input id="cfg-OfficeHours"></div>
+          <div class="field"><label>ประกาศ (แสดงหน้าแรกฝั่งประชาชน)</label><textarea id="cfg-AnnounceText"></textarea></div>
+          <button class="btn btn-primary btn-block" id="btn-save-config">บันทึกการตั้งค่า</button>
+        </div>
+      </div>
+
+      <!-- ใบแจ้งหนี้ -->
+      <div id="tab-invoices" class="tab-panel hidden">
+        <div class="card">
+          <h3 style="margin-bottom:12px;">เพิ่มใบแจ้งหนี้</h3>
+          <div class="field"><label>เลขบัตรประชาชนเจ้าของ</label><input id="inv-citizen"></div>
+          <div class="field"><label>ประเภท</label>
+            <select id="inv-type"><option value="SignTax">ภาษีป้าย</option><option value="LandTax">ภาษีที่ดินฯ</option><option value="Garbage">ค่าขยะ</option></select>
+          </div>
+          <div class="field"><label>ปี (พ.ศ.)</label><input id="inv-year"></div>
+          <div class="field"><label>รายการ/หัวข้อ</label><input id="inv-title" placeholder="เช่น ป้ายร้านค้า ขนาด 2x3 ม."></div>
+          <div class="field"><label>จำนวนเงิน (บาท)</label><input id="inv-amount" type="number"></div>
+          <div class="field"><label>วันครบกำหนดชำระ</label><input id="inv-due" type="date"></div>
+          <button class="btn btn-accent btn-block" id="btn-add-invoice">เพิ่มใบแจ้งหนี้</button>
+        </div>
+        <h3 style="margin:16px 4px 8px;">ค้นหา/รายการล่าสุด</h3>
+        <div class="field"><input id="inv-search-citizen" placeholder="ค้นหาด้วยเลขบัตรประชาชน แล้วกด Enter"></div>
+        <div id="invoice-table"></div>
+      </div>
+
+      <!-- ทรัพย์สิน -->
+      <div id="tab-properties" class="tab-panel hidden">
+        <div class="card">
+          <h3 style="margin-bottom:12px;">เพิ่มทรัพย์สิน</h3>
+          <div class="field"><label>เลขบัตรประชาชนเจ้าของ</label><input id="prop-citizen"></div>
+          <div class="field"><label>ประเภท</label>
+            <select id="prop-type"><option value="SignTax">ภาษีป้าย</option><option value="LandTax">ภาษีที่ดินฯ</option><option value="Garbage">ค่าขยะ</option></select>
+          </div>
+          <div class="field"><label>ชื่อ/รายการ</label><input id="prop-title" placeholder="เช่น โฉนดเลขที่ 1234"></div>
+          <div class="field"><label>รายละเอียด</label><input id="prop-detail"></div>
+          <div class="field"><label>ที่อยู่/ที่ตั้ง</label><input id="prop-address"></div>
+          <button class="btn btn-accent btn-block" id="btn-add-property">บันทึกทรัพย์สิน</button>
+        </div>
+        <div class="field"><input id="prop-search-citizen" placeholder="ค้นหาด้วยเลขบัตรประชาชน แล้วกด Enter"></div>
+        <div id="property-table"></div>
+      </div>
+
+      <!-- เรื่องแจ้ง -->
+      <div id="tab-requests" class="tab-panel hidden">
+        <h3 style="margin:0 4px 8px;">เรื่องที่ประชาชนแจ้งเข้ามา</h3>
+        <div id="request-table"></div>
+      </div>
+
+      <!-- ผู้ดูแลระบบ -->
+      <div id="tab-admins" class="tab-panel hidden">
+        <div class="card">
+          <h3 style="margin-bottom:12px;">เพิ่มเจ้าหน้าที่</h3>
+          <div class="field"><label>LINE User ID (ให้เจ้าหน้าที่คนนั้นแอด OA แล้วดู userId จาก log หรือใช้ LIFF ทดสอบ)</label><input id="new-admin-uid"></div>
+          <div class="field"><label>ชื่อ</label><input id="new-admin-name"></div>
+          <div class="field"><label>สิทธิ์</label>
+            <select id="new-admin-role"><option value="staff">staff (จัดการข้อมูล)</option><option value="superadmin">superadmin (จัดการทุกอย่าง)</option></select>
+          </div>
+          <button class="btn btn-primary btn-block" id="btn-add-admin">เพิ่มเจ้าหน้าที่</button>
+        </div>
+        <div id="admin-table"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="assets/config.js"></script>
+<script src="assets/admin.js"></script>
+</body>
+</html>

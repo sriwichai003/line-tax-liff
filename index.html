@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ระบบชำระภาษีท้องถิ่น</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ===== หน้าจอโหลด ===== -->
+  <div id="screen-loading" class="loading">กำลังเชื่อมต่อ LINE...</div>
+
+  <!-- ===== หน้าจอผูกบัญชี (ครั้งแรกเท่านั้น) ===== -->
+  <div id="screen-link" class="page hidden">
+    <h2 style="margin-bottom:6px;">ยืนยันตัวตนผู้เสียภาษี</h2>
+    <p class="muted" style="margin-bottom:18px;">กรอกเลขบัตรประชาชนเพื่อผูกบัญชีกับข้อมูลภาษีของท่านในระบบ (ทำครั้งเดียว)</p>
+    <div class="field">
+      <label>เลขบัตรประชาชน 13 หลัก</label>
+      <input type="tel" id="input-citizen-id" maxlength="13" placeholder="X-XXXX-XXXXX-XX-X">
+    </div>
+    <div class="field">
+      <label>เบอร์โทรศัพท์ติดต่อ</label>
+      <input type="tel" id="input-phone" placeholder="08X-XXX-XXXX">
+    </div>
+    <button class="btn btn-primary btn-block" id="btn-link-submit">ยืนยันข้อมูล</button>
+    <p class="muted" style="margin-top:12px; font-size:12px;">หากไม่พบข้อมูลของท่านในระบบ กรุณาติดต่อเจ้าหน้าที่เพื่อเพิ่มข้อมูลทรัพย์สินก่อน</p>
+  </div>
+
+  <!-- ===== หน้าแรก (Dashboard) ===== -->
+  <div id="screen-home" class="hidden">
+    <div class="topbar">
+      <div class="org-name" id="home-org-name">หน่วยงาน</div>
+      <div class="greeting" id="home-greeting">สวัสดี</div>
+      <div class="sub">ภาพรวมภาษีและค่าธรรมเนียมของท่าน</div>
+    </div>
+    <div class="summary-grid" id="summary-grid">
+      <!-- ใส่ด้วย JS -->
+    </div>
+    <div class="page">
+      <div class="section-title">ใกล้ครบกำหนดชำระ <span class="muted" style="font-weight:400;">ล่าสุด 5 รายการ</span></div>
+      <div id="near-due-list"></div>
+      <div id="announce-box" class="contact-box hidden" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== รายการภาษี ===== -->
+  <div id="screen-invoices" class="page hidden">
+    <div class="section-title" style="margin-top:6px;">รายการภาษี/ค่าธรรมเนียม</div>
+    <div style="display:flex; gap:8px; margin-bottom:14px; overflow-x:auto;">
+      <button class="btn btn-sm btn-primary" data-filter="">ทั้งหมด</button>
+      <button class="btn btn-sm btn-outline" data-filter="SignTax">ภาษีป้าย</button>
+      <button class="btn btn-sm btn-outline" data-filter="LandTax">ภาษีที่ดินฯ</button>
+      <button class="btn btn-sm btn-outline" data-filter="Garbage">ค่าขยะ</button>
+    </div>
+    <div id="invoice-list"></div>
+  </div>
+
+  <!-- ===== ชำระเงิน ===== -->
+  <div id="screen-pay" class="page hidden">
+    <div class="section-title" style="margin-top:6px;">ช่องทางชำระเงิน</div>
+    <div class="card" id="pay-info-card"></div>
+    <div class="section-title">รายการค้างชำระ</div>
+    <div id="pay-invoice-list"></div>
+  </div>
+
+  <!-- ===== แจ้ง/ยื่นเรื่อง ===== -->
+  <div id="screen-requests" class="page hidden">
+    <div class="section-title" style="margin-top:6px;">แจ้ง / ยื่นเรื่อง</div>
+    <div class="card">
+      <div class="field">
+        <label>ประเภทเรื่อง</label>
+        <select id="req-type">
+          <option value="sign_tax_filing">ยื่นแบบภาษีป้าย</option>
+          <option value="property_change">แจ้งเปลี่ยนแปลงข้อมูลทรัพย์สิน/ที่ดิน</option>
+          <option value="garbage_issue">แจ้งปัญหา/ขอถังขยะเพิ่ม</option>
+          <option value="other">อื่นๆ</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>รายละเอียด</label>
+        <textarea id="req-detail" placeholder="อธิบายรายละเอียดเรื่องที่ต้องการแจ้ง"></textarea>
+      </div>
+      <button class="btn btn-accent btn-block" id="btn-req-submit">ส่งเรื่อง</button>
+    </div>
+    <div class="section-title">สถานะเรื่องที่ยื่น</div>
+    <div id="request-list"></div>
+  </div>
+
+  <!-- ===== โปรไฟล์ ===== -->
+  <div id="screen-profile" class="page hidden">
+    <div class="section-title" style="margin-top:6px;">โปรไฟล์</div>
+    <div class="card" style="text-align:center;">
+      <img id="profile-pic" src="" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+      <div id="profile-name" style="font-family:var(--font-display); font-weight:600; margin-top:8px;"></div>
+      <div class="muted" id="profile-citizen-id" style="margin-top:2px;"></div>
+    </div>
+    <div class="section-title">ติดต่อหน่วยงาน</div>
+    <div class="contact-box" id="contact-box"></div>
+  </div>
+
+  <!-- ===== bottom nav ===== -->
+  <div class="bottom-nav hidden" id="bottom-nav">
+    <button class="nav-item active" data-screen="home"><span class="nav-icon">🏠</span>หน้าแรก</button>
+    <button class="nav-item" data-screen="invoices"><span class="nav-icon">🧾</span>รายการภาษี</button>
+    <button class="nav-item" data-screen="pay"><span class="nav-icon">💳</span>ชำระเงิน</button>
+    <button class="nav-item" data-screen="requests"><span class="nav-icon">📝</span>แจ้งเรื่อง</button>
+    <button class="nav-item" data-screen="profile"><span class="nav-icon">👤</span>โปรไฟล์</button>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="assets/config.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
