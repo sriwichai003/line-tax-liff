@@ -4,6 +4,17 @@ const ADMIN_LIFF_ID = window.APP_CONFIG.ADMIN_LIFF_ID;
 let sessionToken = localStorage.getItem('adminSessionToken') || null;
 let currentRole = localStorage.getItem('adminRole') || '';
 
+// escape HTML (ป้องกัน XSS เมื่อแทรกข้อมูลจาก Sheet เข้า innerHTML)
+function escapeHtml(s) {
+  s = (s === null || s === undefined) ? '' : String(s);
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 async function api(action, payload) {
   const body = Object.assign({ action, sessionToken }, payload || {});
   let resp;
@@ -24,6 +35,15 @@ async function api(action, payload) {
     throw new Error('เซิร์ฟเวอร์ตอบกลับข้อมูลผิดรูปแบบ (status=' + resp.status + ')');
   }
   if (!data.ok) {
+    // Session หมดอายุ/ไม่ถูกต้อง → clear session และ reload
+    if (data.error === 'unauthorized') {
+      localStorage.removeItem('adminSessionToken');
+      localStorage.removeItem('adminRole');
+      localStorage.removeItem('adminName');
+      sessionToken = null;
+      location.reload();
+      throw new Error('session_expired');
+    }
     console.error('Server error detail:', data.detail);
     throw new Error(data.error + (data.detail ? ' (' + data.detail + ')' : ''));
   }
@@ -49,6 +69,7 @@ async function init() {
       currentRole = data.role;
       localStorage.setItem('adminSessionToken', sessionToken);
       localStorage.setItem('adminRole', currentRole);
+      localStorage.setItem('adminName', data.name || 'เจ้าหน้าที่');
       document.getElementById('admin-name').textContent = data.name || 'เจ้าหน้าที่';
       document.getElementById('admin-role').textContent = 'สิทธิ์: ' + currentRole;
     } catch (err) {
@@ -56,6 +77,10 @@ async function init() {
       document.getElementById('screen-denied').classList.remove('hidden');
       return;
     }
+  } else {
+    // มี session เก่า → กู้คืนชื่อ/สิทธิ์จาก localStorage
+    document.getElementById('admin-name').textContent = localStorage.getItem('adminName') || 'เจ้าหน้าที่';
+    document.getElementById('admin-role').textContent = 'สิทธิ์: ' + currentRole;
   }
 
   document.getElementById('screen-loading').classList.add('hidden');
@@ -147,9 +172,10 @@ async function loadInvoiceTable(citizenId) {
     if (data.length === 0) { el.innerHTML = '<div class="empty-state">ไม่พบรายการ</div>'; return; }
     el.innerHTML = '<table class="simple"><tr><th>ผู้เสียภาษี</th><th>ประเภท</th><th>รายการ</th><th>จำนวน</th><th>สถานะ</th><th></th></tr>' +
       data.map(function (inv) {
-        return '<tr><td>' + inv.OwnerCitizenId + '</td><td>' + inv.TaxType + '</td><td>' + (inv.Title || '') + '</td>' +
-          '<td>' + Number(inv.Amount || 0).toLocaleString('th-TH') + '</td><td>' + inv.Status + '</td>' +
-          '<td>' + (inv.Status !== 'Paid' ? '<button class="btn btn-sm btn-primary" onclick="markPaid(\'' + inv.InvoiceId + '\')">รับชำระ</button>' : '-') + '</td></tr>';
+        var paidAttr = inv.Status !== 'Paid' ? ' data-action="markPaid" data-id="' + escapeHtml(inv.InvoiceId) + '"' : '';
+        return '<tr><td>' + escapeHtml(inv.OwnerCitizenId) + '</td><td>' + escapeHtml(inv.TaxType) + '</td><td>' + escapeHtml(inv.Title || '') + '</td>' +
+          '<td>' + Number(inv.Amount || 0).toLocaleString('th-TH') + '</td><td>' + escapeHtml(inv.Status) + '</td>' +
+          '<td>' + (inv.Status !== 'Paid' ? '<button class="btn btn-sm btn-primary"' + paidAttr + '>รับชำระ</button>' : '-') + '</td></tr>';
       }).join('') + '</table>';
   } catch (err) {
     document.getElementById('invoice-table').innerHTML = '<div class="empty-state">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
@@ -158,15 +184,16 @@ async function loadInvoiceTable(citizenId) {
 }
 
 async function markPaid(invoiceId) {
+  var ref = prompt('กรอกเลขใบเสร็จ / เลขอ้างอิงการรับชำระ\n(ปล่อยว่างเพื่อใช้เลขอัตโนมัติ)');
+  if (ref === null) return;
   try {
-    await api('adminMarkPaid', { invoiceId: invoiceId, paymentRef: 'manual-' + Date.now() });
+    await api('adminMarkPaid', { invoiceId: invoiceId, paymentRef: ref.trim() });
     showToast('บันทึกการชำระแล้ว');
     loadInvoiceTable(document.getElementById('inv-search-citizen').value.trim());
   } catch (err) {
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
 }
-window.markPaid = markPaid;
 
 // ---------- properties ----------
 function bindProperties() {
@@ -200,7 +227,7 @@ async function loadPropertyTable(citizenId) {
     if (data.length === 0) { el.innerHTML = '<div class="empty-state">ไม่พบรายการ</div>'; return; }
     el.innerHTML = '<table class="simple"><tr><th>ผู้เป็นเจ้าของ</th><th>ประเภท</th><th>ชื่อรายการ</th><th>ที่อยู่</th></tr>' +
       data.map(function (p) {
-        return '<tr><td>' + p.OwnerCitizenId + '</td><td>' + p.TaxType + '</td><td>' + p.Title + '</td><td>' + (p.Address || '') + '</td></tr>';
+        return '<tr><td>' + escapeHtml(p.OwnerCitizenId) + '</td><td>' + escapeHtml(p.TaxType) + '</td><td>' + escapeHtml(p.Title) + '</td><td>' + escapeHtml(p.Address || '') + '</td></tr>';
       }).join('') + '</table>';
   } catch (err) {
     document.getElementById('property-table').innerHTML = '<div class="empty-state">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
@@ -216,10 +243,10 @@ async function loadRequests() {
     if (data.length === 0) { el.innerHTML = '<div class="empty-state">ยังไม่มีเรื่องแจ้งเข้ามา</div>'; return; }
     el.innerHTML = data.map(function (r) {
       return '<div class="card">' +
-        '<div style="display:flex; justify-content:space-between;"><strong>' + r.Type + '</strong><span class="muted">' + new Date(r.CreatedAt).toLocaleDateString('th-TH') + '</span></div>' +
-        '<p style="font-size:13.5px; margin:8px 0;">' + r.Detail + '</p>' +
-        '<div class="muted" style="margin-bottom:8px;">CitizenId: ' + (r.CitizenId || '-') + '</div>' +
-        '<select onchange="updateReqStatus(\'' + r.RequestId + '\', this.value)">' +
+        '<div style="display:flex; justify-content:space-between;"><strong>' + escapeHtml(r.Type) + '</strong><span class="muted">' + escapeHtml(new Date(r.CreatedAt).toLocaleDateString('th-TH')) + '</span></div>' +
+        '<p style="font-size:13.5px; margin:8px 0;">' + escapeHtml(r.Detail) + '</p>' +
+        '<div class="muted" style="margin-bottom:8px;">CitizenId: ' + escapeHtml(r.CitizenId || '-') + '</div>' +
+        '<select data-action="updateReqStatus" data-id="' + escapeHtml(r.RequestId) + '">' +
         ['Pending', 'InProgress', 'Done', 'Rejected'].map(function (s) {
           return '<option value="' + s + '"' + (s === r.Status ? ' selected' : '') + '>' + s + '</option>';
         }).join('') + '</select>' +
@@ -238,7 +265,6 @@ async function updateReqStatus(requestId, status) {
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
 }
-window.updateReqStatus = updateReqStatus;
 
 // ---------- admins ----------
 function bindAdmins() {
@@ -264,8 +290,8 @@ async function loadAdmins() {
     const el = document.getElementById('admin-table');
     el.innerHTML = '<table class="simple"><tr><th>ชื่อ</th><th>LINE User ID</th><th>สิทธิ์</th><th></th></tr>' +
       data.map(function (a) {
-        return '<tr><td>' + a.Name + '</td><td style="font-size:11px;">' + a.LineUserId + '</td><td>' + a.Role + '</td>' +
-          '<td><button class="btn btn-sm btn-outline" onclick="removeAdmin(\'' + a.LineUserId + '\')">ลบ</button></td></tr>';
+        return '<tr><td>' + escapeHtml(a.Name) + '</td><td style="font-size:11px;">' + escapeHtml(a.LineUserId) + '</td><td>' + escapeHtml(a.Role) + '</td>' +
+          '<td><button class="btn btn-sm btn-outline" data-action="removeAdmin" data-id="' + escapeHtml(a.LineUserId) + '">ลบ</button></td></tr>';
       }).join('') + '</table>';
   } catch (err) {
     document.getElementById('admin-table').innerHTML = '<div class="empty-state">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
@@ -282,7 +308,23 @@ async function removeAdmin(lineUserId) {
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
 }
-window.removeAdmin = removeAdmin;
+
+// Event delegation — จัดการ click/change ผ่าน data-action แทน inline onclick
+document.getElementById('app').addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  var action = btn.dataset.action;
+  var id = btn.dataset.id;
+  if (action === 'markPaid') markPaid(id);
+  if (action === 'removeAdmin') removeAdmin(id);
+});
+document.getElementById('app').addEventListener('change', function (e) {
+  var el = e.target.closest('[data-action]');
+  if (!el) return;
+  if (el.dataset.action === 'updateReqStatus') {
+    updateReqStatus(el.dataset.id, el.value);
+  }
+});
 
 init().catch(function (err) {
   document.getElementById('screen-loading').textContent = 'เกิดข้อผิดพลาด: ' + err.message;

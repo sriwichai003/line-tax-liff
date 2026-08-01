@@ -201,3 +201,12 @@ button{ font-family: var(--font-body); transition: all 0.2s ease; }
   background: var(--primary-dark); color:#fff; padding:10px 18px; border-radius: var(--radius-pill);
   font-size:13px; z-index:100; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
 }
+
+/* select ที่อยู่นอก .field (เช่นใน admin request cards) */
+select:not(.field select){
+  width:100%; padding:9px 12px; border-radius:10px; border:1.5px solid var(--border);
+  font-family: var(--font-body); font-size:13.5px; background: var(--surface); color: var(--text);
+  cursor:pointer; transition: border-color 0.2s ease;
+}
+select:not(.field select):focus{ outline:none; border-color: var(--primary); }
+

@@ -10,6 +10,17 @@ let invoicesCache = [];
 const TAX_TYPE_LABEL = { SignTax: 'ภาษีป้าย', LandTax: 'ภาษีที่ดินและสิ่งปลูกสร้าง', Garbage: 'ค่าธรรมเนียมขยะ' };
 const TAX_TYPE_ICON = { SignTax: '<i class="fas fa-sign"></i>', LandTax: '<i class="fas fa-home"></i>', Garbage: '<i class="fas fa-trash-alt"></i>' };
 
+// ============ helper: escape HTML (ป้องกัน XSS เมื่อแทรกข้อมูลจาก Sheet เข้า innerHTML) ============
+function escapeHtml(s) {
+  s = (s === null || s === undefined) ? '' : String(s);
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ============ helper: เรียก API ============
 async function api(action, payload) {
   const body = Object.assign({ action, sessionToken }, payload || {});
@@ -153,19 +164,20 @@ function renderHome(dash) {
   if (publicConfig.AnnounceText) {
     const box = document.getElementById('announce-box');
     box.classList.remove('hidden');
-    box.innerHTML = '<i class="fas fa-bullhorn" style="margin-right:6px; color:var(--accent);"></i>' + publicConfig.AnnounceText;
+    box.innerHTML = '<i class="fas fa-bullhorn" style="margin-right:6px; color:var(--accent);"></i>' + escapeHtml(publicConfig.AnnounceText);
   }
   showScreen('home');
 }
 
 function renderInvoiceCard(inv) {
   const meta = statusMeta(inv);
+  const taxTypeLabel = TAX_TYPE_LABEL[inv.TaxType] ? TAX_TYPE_LABEL[inv.TaxType] : escapeHtml(inv.TaxType);
   return '<div class="stub-card ' + meta.cls + '">' +
     '<div class="stub-tab"></div>' +
     '<div class="stub-body"><div class="stub-perf"></div>' +
     '<div class="row1">' +
-    '<div><div class="tax-type">' + (TAX_TYPE_LABEL[inv.TaxType] || inv.TaxType) + ' • ' + (inv.Year || '') + '</div>' +
-    '<div class="title">' + (inv.Title || inv.InvoiceId) + '</div></div>' +
+    '<div><div class="tax-type">' + taxTypeLabel + ' • ' + escapeHtml(inv.Year) + '</div>' +
+    '<div class="title">' + escapeHtml(inv.Title || inv.InvoiceId) + '</div></div>' +
     '<div class="amount">฿' + formatBaht(inv.Amount) + '</div>' +
     '</div>' +
     '<div class="row2"><span class="badge ' + meta.cls + '">' + meta.label + '</span>' +
@@ -207,10 +219,10 @@ function bindInvoiceFilters() {
 function renderPayInfo() {
   document.getElementById('pay-info-card').innerHTML =
     '<div class="muted" style="margin-bottom:6px;">โอนเข้าบัญชี</div>' +
-    '<div style="font-family:var(--font-display); font-weight:600; font-size:15px;">' + (publicConfig.BankName || '-') + '</div>' +
-    '<div style="font-size:18px; letter-spacing:0.5px; margin:4px 0;">' + (publicConfig.BankAccountNo || '-') + '</div>' +
-    '<div class="muted">ชื่อบัญชี: ' + (publicConfig.BankAccountName || '-') + '</div>' +
-    (publicConfig.PromptPay ? '<div class="muted" style="margin-top:6px;">พร้อมเพย์: ' + publicConfig.PromptPay + '</div>' : '') +
+    '<div style="font-family:var(--font-display); font-weight:600; font-size:15px;">' + escapeHtml(publicConfig.BankName || '-') + '</div>' +
+    '<div style="font-size:18px; letter-spacing:0.5px; margin:4px 0;">' + escapeHtml(publicConfig.BankAccountNo || '-') + '</div>' +
+    '<div class="muted">ชื่อบัญชี: ' + escapeHtml(publicConfig.BankAccountName || '-') + '</div>' +
+    (publicConfig.PromptPay ? '<div class="muted" style="margin-top:6px;">พร้อมเพย์: ' + escapeHtml(publicConfig.PromptPay) + '</div>' : '') +
     '<div class="muted" style="margin-top:10px;">หลังชำระแล้ว กรุณาเก็บหลักฐานการโอนไว้ หรือแจ้งเจ้าหน้าที่ผ่านเมนู "แจ้งเรื่อง" เพื่อยืนยันการชำระ</div>';
 }
 
@@ -260,8 +272,9 @@ async function loadRequests() {
     const typeLabel = { sign_tax_filing: 'ยื่นแบบภาษีป้าย', property_change: 'แจ้งเปลี่ยนแปลงข้อมูล', garbage_issue: 'ปัญหาขยะ', other: 'อื่นๆ' };
     const statusLabel = { Pending: 'รอดำเนินการ', InProgress: 'กำลังดำเนินการ', Done: 'เสร็จสิ้น', Rejected: 'ปฏิเสธ' };
     list.innerHTML = '<div class="card status-list">' + data.map(function (r) {
-      return '<div class="status-row"><span>' + (typeLabel[r.Type] || r.Type) + '<br><span class="muted">' + formatDate(r.CreatedAt) + '</span></span>' +
-        '<span class="badge ' + (r.Status === 'Done' ? 'paid' : r.Status === 'Rejected' ? 'overdue' : 'unpaid') + '">' + (statusLabel[r.Status] || r.Status) + '</span></div>';
+      const typeText = typeLabel[r.Type] ? typeLabel[r.Type] : escapeHtml(r.Type);
+      return '<div class="status-row"><span>' + typeText + '<br><span class="muted">' + escapeHtml(formatDate(r.CreatedAt)) + '</span></span>' +
+        '<span class="badge ' + (r.Status === 'Done' ? 'paid' : r.Status === 'Rejected' ? 'overdue' : 'unpaid') + '">' + (statusLabel[r.Status] || escapeHtml(r.Status)) + '</span></div>';
     }).join('') + '</div>';
   } catch (err) {
     list.innerHTML = '<div class="empty-state"><div class="emoji" style="color:var(--danger)"><i class="fas fa-times-circle"></i></div>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
@@ -273,12 +286,15 @@ async function loadRequests() {
 async function loadProfile() {
   try {
     const data = await api('getProfile', {});
-    document.getElementById('profile-pic').src = data.PictureUrl || '';
+    // ใช้ setAttribute แทนการฝัง URL ตรงเข้า src เพื่อกันการโหลด javascript: / data: URL
+    const pic = document.getElementById('profile-pic');
+    const url = String(data.PictureUrl || '');
+    pic.src = (/^https?:\/\//i.test(url)) ? url : '';
     document.getElementById('profile-name').textContent = data.DisplayName || '';
     document.getElementById('profile-citizen-id').textContent = 'เลขบัตรประชาชน: ' + (data.CitizenId || '-');
     document.getElementById('contact-box').innerHTML =
-      '<i class="fas fa-phone" style="width:16px;"></i> โทร: ' + (publicConfig.ContactPhone || '-') + '<br>' +
-      '<i class="far fa-clock" style="width:16px;"></i> เวลาทำการ: ' + (publicConfig.OfficeHours || '-');
+      '<i class="fas fa-phone" style="width:16px;"></i> โทร: ' + escapeHtml(publicConfig.ContactPhone || '-') + '<br>' +
+      '<i class="far fa-clock" style="width:16px;"></i> เวลาทำการ: ' + escapeHtml(publicConfig.OfficeHours || '-');
   } catch (err) {
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
