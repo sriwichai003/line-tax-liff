@@ -26,7 +26,7 @@
   --radius-pill: 999px;
   --shadow-card: 0 4px 16px rgba(11,74,94,0.06);
   --shadow-hover: 0 8px 24px rgba(11,74,94,0.12);
-  --nav-height: 64px;
+  --nav-height: 70px;
 }
 
 *{ box-sizing:border-box; }

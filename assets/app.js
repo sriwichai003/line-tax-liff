@@ -7,8 +7,8 @@ let profile = JSON.parse(localStorage.getItem('profile') || 'null');
 let publicConfig = {};
 let invoicesCache = [];
 
-const TAX_TYPE_LABEL = { SignTax: 'ภาษีป้าย', LandTax: 'ภาษีที่ดินและสิ่งปลูกสร้าง', Garbage: 'ค่าธรรมเนียมขยะ' };
-const TAX_TYPE_ICON = { SignTax: '<i class="fas fa-sign"></i>', LandTax: '<i class="fas fa-home"></i>', Garbage: '<i class="fas fa-trash-alt"></i>' };
+const TAX_TYPE_LABEL = { SignTax: 'ภาษีป้าย', LandTax: 'ภาษีที่ดินและสิ่งปลูกสร้าง' };
+const TAX_TYPE_ICON = { SignTax: '<i class="fas fa-sign"></i>', LandTax: '<i class="fas fa-home"></i>' };
 
 // ============ helper: escape HTML (ป้องกัน XSS เมื่อแทรกข้อมูลจาก Sheet เข้า innerHTML) ============
 function escapeHtml(s) {
@@ -269,7 +269,7 @@ async function loadRequests() {
       list.innerHTML = '<div class="empty-state"><div class="emoji"><i class="fas fa-inbox"></i></div>ยังไม่มีเรื่องที่แจ้ง</div>';
       return;
     }
-    const typeLabel = { sign_tax_filing: 'ยื่นแบบภาษีป้าย', property_change: 'แจ้งเปลี่ยนแปลงข้อมูล', garbage_issue: 'ปัญหาขยะ', other: 'อื่นๆ' };
+    const typeLabel = { sign_tax_filing: 'ยื่นแบบภาษีป้าย', property_change: 'แจ้งเปลี่ยนแปลงข้อมูล', other: 'อื่นๆ' };
     const statusLabel = { Pending: 'รอดำเนินการ', InProgress: 'กำลังดำเนินการ', Done: 'เสร็จสิ้น', Rejected: 'ปฏิเสธ' };
     list.innerHTML = '<div class="card status-list">' + data.map(function (r) {
       const typeText = typeLabel[r.Type] ? typeLabel[r.Type] : escapeHtml(r.Type);
